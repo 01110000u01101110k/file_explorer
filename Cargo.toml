@@ -1,0 +1,13 @@
+[package]
+name = "File_Explorer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = {version = "0.31.1", features = [
+    "default",
+    "__screenshot", # __screenshot is so we can dump a screenshot using EFRAME_SCREENSHOT_TO
+]}
+egui_extras = { version = "0.31.1", features = ["default", "image", "all_loaders", "datepicker"] }
+image = { version = "0.25.5", features = ["jpeg", "png"] }
+display-info = "0.5.4"
