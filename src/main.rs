@@ -3,6 +3,9 @@
 
 use eframe::{egui, egui::vec2, egui::RichText, egui::CursorIcon::PointingHand};
 use display_info::DisplayInfo;
+use windows::{
+    Win32::Storage::FileSystem::GetLogicalDrives,
+};
 
 use std::{
     env,
@@ -49,6 +52,8 @@ fn main() -> eframe::Result {
 struct FileExplorerApp {
     current_dir: PathBuf,
     program_root: PathBuf,
+    is_disk_selection: bool,
+    disk_list: Vec<char>,
     search: String,
 }
 
@@ -59,6 +64,8 @@ impl Default for FileExplorerApp {
         Self {
             current_dir: path.clone(),
             program_root: path,
+            is_disk_selection: false,
+            disk_list: Vec::new(),
             search: String::new(),
         }
     }
@@ -94,9 +101,56 @@ impl FileExplorerApp {
     }
 
     fn prev_folder(&mut self) {
-        println!("{:#?}", self);
+        let to_prev_folder = self.current_dir.pop();
 
-        self.current_dir.pop();
+        println!("{:#?}", self.current_dir);
+
+        if !to_prev_folder {
+            self.is_disk_selection = true;
+
+            self.save_disk_list();
+        } else {
+            if self.is_disk_selection {
+                self.is_disk_selection = false;
+            }
+        }
+    }
+
+    fn save_disk_list(&mut self) {
+        match OS {
+            "windows" => {
+                let drives_mask = unsafe { GetLogicalDrives() };
+
+                self.disk_list = Vec::new();
+
+                for i in 0..26 {
+                    if drives_mask & (1 << i) != 0 {
+                        let letter = (b'A' + i as u8) as char;
+
+                        self.disk_list.push(letter);
+                    }
+                }
+            },
+            "linux" => {
+                // todo - реалізувати версію для лінукс систем
+                /*let file = File::open("/proc/mounts")?;
+                let reader = BufReader::new(file);
+                let mut mount_points = Vec::new();
+
+                for line in reader.lines() {
+                    if let Ok(line) = line {
+                        let fields: Vec<&str> = line.split_whitespace().collect();
+                        
+                        if fields.len() >= 2 {
+                            mount_points.push(fields[1].to_string());
+                        }
+                    }
+                }*/
+            },
+            _ => {
+                println!("операційна система не підтримується");
+            }
+        }
     }
 }
 
@@ -145,33 +199,51 @@ impl eframe::App for FileExplorerApp {
             ui.add(egui::Separator::default());
             ui.add_space(5.0);
 
-            for dir_element in self.current_dir.read_dir().unwrap() {
-                if let Ok(dir_element) = dir_element {
-                    if dir_element.metadata().unwrap().is_dir() {
-                        let dir_button = ui.add(egui::Button::image_and_text(
-                            egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/folder.svg")),
-                            RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
-                        ));
+            if self.is_disk_selection {
+                for disk in &self.disk_list {
+                    let disk_button = ui.add(egui::Button::image_and_text(
+                        egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/hard-drive.svg")),
+                        RichText::new(disk.to_string()).size(14.0),
+                    ));
 
-                        dir_button.clone().on_hover_cursor(PointingHand);
+                    disk_button.clone().on_hover_cursor(PointingHand);
 
-                        if dir_button.double_clicked() {
-                            self.open_folder(dir_element);
-                        }
-                    } else if dir_element.metadata().unwrap().is_file() {
-                        let file_button = ui.add(egui::Button::image_and_text(
-                            egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/file.svg")),
-                            RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
-                        ));
-
-                        file_button.clone().on_hover_cursor(PointingHand);
-
-                        if file_button.double_clicked() {
-                            self.open_file(dir_element);
-                        }
+                    if disk_button.double_clicked() {
+                        let mut path = PathBuf::from(format!("{}:\\", disk));
+                    
+                        self.current_dir = path;
+                        self.is_disk_selection = false;
                     }
-                } else {
+                }
+            } else {
+                for dir_element in self.current_dir.read_dir().unwrap() {
+                    if let Ok(dir_element) = dir_element {
+                        if dir_element.metadata().unwrap().is_dir() {
+                            let dir_button = ui.add(egui::Button::image_and_text(
+                                egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/folder.svg")),
+                                RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
+                            ));
 
+                            dir_button.clone().on_hover_cursor(PointingHand);
+
+                            if dir_button.double_clicked() {
+                                self.open_folder(dir_element);
+                            }
+                        } else if dir_element.metadata().unwrap().is_file() {
+                            let file_button = ui.add(egui::Button::image_and_text(
+                                egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/file.svg")),
+                                RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
+                            ));
+
+                            file_button.clone().on_hover_cursor(PointingHand);
+
+                            if file_button.double_clicked() {
+                                self.open_file(dir_element);
+                            }
+                        }
+                    } else {
+
+                    }
                 }
             }
         });

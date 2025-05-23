@@ -11,3 +11,4 @@ eframe = {version = "0.31.1", features = [
 egui_extras = { version = "0.31.1", features = ["default", "image", "all_loaders", "datepicker"] }
 image = { version = "0.25.5", features = ["jpeg", "png"] }
 display-info = "0.5.4"
+windows = {version = "0.61.1", features = ["Win32_Storage_FileSystem"]}
