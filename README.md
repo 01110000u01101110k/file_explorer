@@ -1,1 +1,1 @@
-A quick and simple file explorer that I created for my own use.
+A fast and simple file explorer that I create for my own use.
