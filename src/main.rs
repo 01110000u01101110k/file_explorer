@@ -1,7 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use eframe::{egui, egui::vec2, egui::RichText, egui::CursorIcon::PointingHand};
+use eframe::{
+    egui, 
+    egui::vec2, 
+    egui::pos2, 
+    egui::Pos2, 
+    egui::RichText, 
+    egui::CursorIcon::PointingHand,
+    egui::TopBottomPanel,
+    egui::Margin
+};
 use display_info::DisplayInfo;
 use windows::{
     Win32::Storage::FileSystem::GetLogicalDrives,
@@ -54,6 +63,8 @@ struct FileExplorerApp {
     program_root: PathBuf,
     is_disk_selection: bool,
     disk_list: Vec<char>,
+    is_main_context_menu_open: bool,
+    interact_pointer_pos: Pos2,
     search: String,
 }
 
@@ -66,6 +77,8 @@ impl Default for FileExplorerApp {
             program_root: path,
             is_disk_selection: false,
             disk_list: Vec::new(),
+            is_main_context_menu_open: false,
+            interact_pointer_pos: pos2(0.0, 0.0),
             search: String::new(),
         }
     }
@@ -103,8 +116,6 @@ impl FileExplorerApp {
     fn prev_folder(&mut self) {
         let to_prev_folder = self.current_dir.pop();
 
-        println!("{:#?}", self.current_dir);
-
         if !to_prev_folder {
             self.is_disk_selection = true;
 
@@ -123,7 +134,7 @@ impl FileExplorerApp {
 
                 self.disk_list = Vec::new();
 
-                for i in 0..26 {
+                for i in 0..26 { // todo: розібрати потім детальніше тему масок
                     if drives_mask & (1 << i) != 0 {
                         let letter = (b'A' + i as u8) as char;
 
@@ -157,95 +168,218 @@ impl FileExplorerApp {
 impl eframe::App for FileExplorerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("File Explorer");
+            TopBottomPanel::top("top_panel").show(ctx, |ui| {
+                ui.heading("File Explorer");
 
-            ui.add_space(5.0);
-            ui.add(egui::Separator::default());
-            ui.add_space(5.0);
+                ui.add_space(5.0);
+                ui.add(egui::Separator::default());
+                ui.add_space(5.0);
 
-            ui.horizontal(|ui| {
-                let name_label = ui.label("Search: ");
+                ui.horizontal(|ui| {
+                    let name_label = ui.label("Search: ");
 
-                ui.text_edit_singleline(&mut self.search).labelled_by(name_label.id);
+                    ui.text_edit_singleline(&mut self.search).labelled_by(name_label.id);
 
-                let search_button = ui.add(egui::Button::image(
-                    egui::Image::new(
-                        format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/magnifying-glass.svg")
-                    ).max_size(vec2(20.0, 20.0)),
-                ));
-
-                search_button.clone().on_hover_cursor(PointingHand);
-
-                if search_button.clicked() {
-                    
-                }
-            });
-
-            ui.horizontal(|ui| {
-                let prev_folder_button = ui.add(egui::Button::image(
-                    egui::Image::new(
-                        format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/arrow-left.svg")
-                    ).max_size(vec2(20.0, 20.0)),
-                ));
-
-                prev_folder_button.clone().on_hover_cursor(PointingHand);
-
-                if prev_folder_button.clicked() {
-                    self.prev_folder();
-                }
-            });
-
-            ui.add_space(5.0);
-            ui.add(egui::Separator::default());
-            ui.add_space(5.0);
-
-            if self.is_disk_selection {
-                for disk in &self.disk_list {
-                    let disk_button = ui.add(egui::Button::image_and_text(
-                        egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/hard-drive.svg")),
-                        RichText::new(disk.to_string()).size(14.0),
+                    let search_button = ui.add(egui::Button::image(
+                        egui::Image::new(
+                            format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/magnifying-glass.svg")
+                        ).max_size(vec2(20.0, 20.0)),
                     ));
 
-                    disk_button.clone().on_hover_cursor(PointingHand);
+                    search_button.clone().on_hover_cursor(PointingHand);
 
-                    if disk_button.double_clicked() {
-                        let mut path = PathBuf::from(format!("{}:\\", disk));
-                    
-                        self.current_dir = path;
-                        self.is_disk_selection = false;
+                    if search_button.clicked() {
+                        
                     }
-                }
-            } else {
-                for dir_element in self.current_dir.read_dir().unwrap() {
-                    if let Ok(dir_element) = dir_element {
-                        if dir_element.metadata().unwrap().is_dir() {
-                            let dir_button = ui.add(egui::Button::image_and_text(
-                                egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/folder.svg")),
-                                RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
+                });
+
+                ui.add_space(10.0);
+
+                ui.horizontal(|ui| {
+                    let prev_folder_button = ui.add(egui::Button::image(
+                        egui::Image::new(
+                            format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/arrow-left.svg")
+                        ).max_size(vec2(20.0, 20.0)),
+                    ));
+
+                    prev_folder_button.clone().on_hover_cursor(PointingHand);
+
+                    if prev_folder_button.clicked() {
+                        self.prev_folder();
+                    }
+                });
+
+                ui.add_space(5.0);
+            });
+
+            egui::CentralPanel::default()
+                .frame(egui::Frame {
+                    inner_margin: Margin {
+                        left: 15,
+                        right: 15,
+                        top: 15,
+                        bottom: 15,
+                    },
+                    //fill: egui::Color32::from_rgb(0, 0, 0),
+                    ..Default::default()
+                })
+                .show(ctx, |ui| {
+
+                egui::ScrollArea::vertical()
+                .id_salt("main_scroll_area")
+                .auto_shrink(false)
+                .max_height(ui.available_height())
+                .show(ui, |ui| {
+                    let response = ui.interact(
+                        ui.available_rect_before_wrap(),
+                        ui.id().with("main_scroll_area"),
+                        egui::Sense::click(),
+                    );
+
+                    if response.clicked_by(egui::PointerButton::Secondary) {
+                        if let Some(pointer_pos) = ctx.input(|i| i.pointer.interact_pos()) {
+                            self.is_main_context_menu_open = true;
+                            self.interact_pointer_pos = pointer_pos;
+                        }
+                    }
+
+                    if ctx.input(|i| i.pointer.primary_clicked()) {
+                        if self.is_main_context_menu_open {
+                            self.is_main_context_menu_open = false;
+                        }
+                    }
+
+                    if self.is_main_context_menu_open {
+                        egui::Window::new("")
+                            .current_pos(self.interact_pointer_pos)
+                            .movable(false)
+                            .resizable(false)
+                            .collapsible(false)
+                            .title_bar(false)
+                            .show(ctx, |ui| {
+                                if ui.button("Оновити").clicked() {
+                                    println!("Оновити");
+                                    ui.close_menu();
+                                }
+                            });
+                    }
+
+                    if self.is_disk_selection {
+                        for disk in &self.disk_list {
+                            let disk_button = ui.add(egui::Button::image_and_text(
+                                egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/hard-drive.svg")),
+                                RichText::new(disk.to_string()).size(14.0),
                             ));
 
-                            dir_button.clone().on_hover_cursor(PointingHand);
+                            disk_button.clone().on_hover_cursor(PointingHand);
 
-                            if dir_button.double_clicked() {
-                                self.open_folder(dir_element);
+                            if disk_button.double_clicked() {
+                                let mut path = PathBuf::from(format!("{}:\\", disk));
+                            
+                                self.current_dir = path;
+                                self.is_disk_selection = false;
                             }
-                        } else if dir_element.metadata().unwrap().is_file() {
-                            let file_button = ui.add(egui::Button::image_and_text(
-                                egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/file.svg")),
-                                RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
-                            ));
 
-                            file_button.clone().on_hover_cursor(PointingHand);
+                            disk_button.context_menu(|ui| {
+                                if ui.button("Інформація про диск").clicked() {
+                                    println!("Інформація про диск");
+                                    ui.close_menu();
+                                }
 
-                            if file_button.double_clicked() {
-                                self.open_file(dir_element);
-                            }
+                                self.is_main_context_menu_open = false;
+                            });
                         }
                     } else {
+                        for dir_element in self.current_dir.read_dir().unwrap() {
+                            if let Ok(dir_element) = dir_element {
+                                if dir_element.metadata().unwrap().is_dir() {
+                                    let dir_button = ui.add(egui::Button::image_and_text(
+                                        egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/folder.svg")),
+                                        RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
+                                    ));
 
+                                    dir_button.clone().on_hover_cursor(PointingHand);
+
+                                    if dir_button.double_clicked() {
+                                        self.open_folder(dir_element);
+                                    }
+
+                                    dir_button.context_menu(|ui| {
+                                        if ui.button("Перейменувати").clicked() {
+                                            println!("Перейменувати");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Копіювати").clicked() {
+                                            println!("Копіювати");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Вирізати").clicked() {
+                                            println!("Вирізати");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Видалити").clicked() {
+                                            println!("Видалити");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Копіювати шлях").clicked() {
+                                            println!("Копіювати шлях");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Інформація про папку").clicked() {
+                                            println!("Інформація про папку");
+                                            ui.close_menu();
+                                        }
+
+                                        self.is_main_context_menu_open = false;
+                                    });
+                                } else if dir_element.metadata().unwrap().is_file() {
+                                    let file_button = ui.add(egui::Button::image_and_text(
+                                        egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/file.svg")),
+                                        RichText::new(dir_element.file_name().to_str().unwrap()).size(14.0),
+                                    ));
+
+                                    file_button.clone().on_hover_cursor(PointingHand);
+
+                                    if file_button.double_clicked() {
+                                        self.open_file(dir_element);
+                                    }
+
+                                    file_button.context_menu(|ui| {
+                                        if ui.button("Перейменувати").clicked() {
+                                            println!("Перейменувати");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Копіювати").clicked() {
+                                            println!("Копіювати");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Вирізати").clicked() {
+                                            println!("Вирізати");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Видалити").clicked() {
+                                            println!("Видалити");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Копіювати шлях").clicked() {
+                                            println!("Копіювати шлях");
+                                            ui.close_menu();
+                                        }
+                                        if ui.button("Інформація про файл").clicked() {
+                                            println!("Інформація про файл");
+                                            ui.close_menu();
+                                        }
+
+                                        self.is_main_context_menu_open = false;
+                                    });
+                                }
+                            } else {
+
+                            }
+                        }
                     }
-                }
-            }
+                });
+            });
         });
     }
 }
