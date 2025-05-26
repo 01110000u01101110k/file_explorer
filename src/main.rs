@@ -9,6 +9,7 @@ use eframe::{
     egui::RichText, 
     egui::CursorIcon::PointingHand,
     egui::TopBottomPanel,
+    egui::SidePanel,
     egui::Margin
 };
 use display_info::DisplayInfo;
@@ -76,7 +77,7 @@ impl Default for FileExplorerApp {
             current_dir: path.clone(),
             program_root: path,
             is_disk_selection: false,
-            disk_list: Vec::new(),
+            disk_list: get_disk_list(),
             is_main_context_menu_open: false,
             interact_pointer_pos: pos2(0.0, 0.0),
             search: String::new(),
@@ -119,7 +120,7 @@ impl FileExplorerApp {
         if !to_prev_folder {
             self.is_disk_selection = true;
 
-            self.save_disk_list();
+            self.update_disk_list();
         } else {
             if self.is_disk_selection {
                 self.is_disk_selection = false;
@@ -127,46 +128,55 @@ impl FileExplorerApp {
         }
     }
 
-    fn save_disk_list(&mut self) {
-        match OS {
-            "windows" => {
-                let drives_mask = unsafe { GetLogicalDrives() };
+    fn update_disk_list(&mut self) {
+        self.disk_list = get_disk_list();
+    }
+}
 
-                self.disk_list = Vec::new();
+fn get_disk_list() -> Vec<char> {
+    let mut disk_list: Vec<char> = Vec::new();
 
-                for i in 0..26 { // todo: розібрати потім детальніше тему масок
-                    if drives_mask & (1 << i) != 0 {
-                        let letter = (b'A' + i as u8) as char;
+    match OS {
+        "windows" => {
+            let drives_mask = unsafe { GetLogicalDrives() };
 
-                        self.disk_list.push(letter);
+            for i in 0..26 { // todo: розібрати потім детальніше тему масок
+                if drives_mask & (1 << i) != 0 {
+                    let letter = (b'A' + i as u8) as char;
+
+                    disk_list.push(letter);
+                }
+            }
+        },
+        "linux" => {
+            // todo - реалізувати версію для лінукс систем
+            /*let file = File::open("/proc/mounts")?;
+            let reader = BufReader::new(file);
+            let mut mount_points = Vec::new();
+
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    let fields: Vec<&str> = line.split_whitespace().collect();
+                    
+                    if fields.len() >= 2 {
+                        mount_points.push(fields[1].to_string());
                     }
                 }
-            },
-            "linux" => {
-                // todo - реалізувати версію для лінукс систем
-                /*let file = File::open("/proc/mounts")?;
-                let reader = BufReader::new(file);
-                let mut mount_points = Vec::new();
-
-                for line in reader.lines() {
-                    if let Ok(line) = line {
-                        let fields: Vec<&str> = line.split_whitespace().collect();
-                        
-                        if fields.len() >= 2 {
-                            mount_points.push(fields[1].to_string());
-                        }
-                    }
-                }*/
-            },
-            _ => {
-                println!("операційна система не підтримується");
-            }
+            }*/
+        },
+        _ => {
+            println!("операційна система не підтримується");
         }
     }
+
+    disk_list
 }
 
 impl eframe::App for FileExplorerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let window_rect = ctx.screen_rect();
+        let window_size = window_rect.size();
+        
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.heading("File Explorer");
 
@@ -210,6 +220,63 @@ impl eframe::App for FileExplorerApp {
 
             ui.add_space(5.0);
         });
+
+        SidePanel::left("left_panel")
+            .min_width(window_size.x / 100.0 * 15.0)
+            .max_width(window_size.x / 100.0 * 20.0)
+            .frame(egui::Frame {
+                inner_margin: Margin {
+                    left: 15,
+                    right: 15,
+                    top: 15,
+                    bottom: 15,
+                },
+                //fill: egui::Color32::from_rgb(255, 255, 255),
+                ..Default::default()
+            })
+            .show(ctx, |ui| {
+                ui.vertical_centered_justified(|ui| {
+                    let button_update = ui.add(egui::Button::image_and_text(
+                        egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/arrow-rotate-right.svg")),
+                        RichText::new("Update").size(14.0),
+                    ));
+
+                    button_update.clone().on_hover_cursor(PointingHand);
+
+                    if button_update.clicked() {
+                        self.update_disk_list();
+                    }
+
+                    ui.add_space(5.0);
+                    ui.add(egui::Separator::default());
+                    ui.add_space(5.0);
+
+                    for disk in &self.disk_list {
+                        let disk_button = ui.add(egui::Button::image_and_text(
+                            egui::Image::new(format!("file://{}/{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/hard-drive.svg")),
+                            RichText::new(disk.to_string()).size(14.0),
+                        ));
+
+                        disk_button.clone().on_hover_cursor(PointingHand);
+
+                        if disk_button.clicked() {
+                            let mut path = PathBuf::from(format!("{}:\\", disk));
+                            
+                            self.current_dir = path;
+                            self.is_disk_selection = false;
+                        }
+
+                        disk_button.context_menu(|ui| {
+                            if ui.button("Інформація про диск").clicked() {
+                                println!("Інформація про диск");
+                                ui.close_menu();
+                            }
+
+                            self.is_main_context_menu_open = false;
+                        });
+                    }
+                });
+            });
 
         egui::CentralPanel::default()
             .frame(egui::Frame {
