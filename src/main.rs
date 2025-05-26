@@ -216,6 +216,30 @@ impl eframe::App for FileExplorerApp {
                 if prev_folder_button.clicked() {
                     self.prev_folder();
                 }
+
+                let mut theme_icon: String = String::new();
+
+                if ctx.style().visuals.dark_mode {
+                    theme_icon = "sun.svg".to_string();
+                } else {
+                    theme_icon = "moon.svg".to_string();
+                }
+
+                let color_theme_button = ui.add(egui::Button::image(
+                    egui::Image::new(
+                        format!("file://{}/{}{}", self.program_root.to_str().unwrap(), "assets/Font_Awesome_Icons/solid/", theme_icon)
+                    ).max_size(vec2(20.0, 20.0)),
+                ));
+
+                color_theme_button.clone().on_hover_cursor(PointingHand);
+
+                if color_theme_button.clicked() {
+                    if ctx.style().visuals.dark_mode {
+                        ctx.set_visuals(egui::style::Visuals::light());
+                    } else {
+                        ctx.set_visuals(egui::style::Visuals::dark());
+                    }
+                }
             });
 
             ui.add_space(5.0);
@@ -231,7 +255,11 @@ impl eframe::App for FileExplorerApp {
                     top: 15,
                     bottom: 15,
                 },
-                //fill: egui::Color32::from_rgb(255, 255, 255),
+                fill: if ctx.style().visuals.dark_mode {
+                    egui::Color32::from_rgb(16, 16, 16)
+                } else {
+                    egui::Color32::from_rgb(248, 248, 248)
+                },
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -286,7 +314,11 @@ impl eframe::App for FileExplorerApp {
                     top: 15,
                     bottom: 15,
                 },
-                //fill: egui::Color32::from_rgb(0, 0, 0),
+                fill: if ctx.style().visuals.dark_mode {
+                    egui::Color32::from_rgb(16, 16, 16)
+                } else {
+                    egui::Color32::from_rgb(248, 248, 248)
+                },
                 ..Default::default()
             })
             .show(ctx, |ui| {
