@@ -23,7 +23,9 @@ use std::{
     sync::Arc,
     process::Command,
     env::consts::OS,
-    fs::DirEntry
+    fs::DirEntry,
+    fs::remove_dir_all,
+    fs::remove_file
 };
 
 fn main() -> eframe::Result {
@@ -86,7 +88,7 @@ impl Default for FileExplorerApp {
 }
 
 impl FileExplorerApp {
-    fn open_file(&self, dir_entry: DirEntry) {
+    fn open_file(&self, dir_entry: &DirEntry) {
         match OS {
             "windows" => {
                 Command::new("cmd")
@@ -110,7 +112,7 @@ impl FileExplorerApp {
         }
     }
 
-    fn open_folder(&mut self, dir_entry: DirEntry) {
+    fn open_folder(&mut self, dir_entry: &DirEntry) {
         self.current_dir = dir_entry.path();
     }
 
@@ -399,7 +401,7 @@ impl eframe::App for FileExplorerApp {
                                 dir_button.clone().on_hover_cursor(PointingHand);
 
                                 if dir_button.double_clicked() {
-                                    self.open_folder(dir_element);
+                                    self.open_folder(&dir_element);
                                 }
 
                                 dir_button.context_menu(|ui| {
@@ -416,7 +418,14 @@ impl eframe::App for FileExplorerApp {
                                         ui.close_menu();
                                     }
                                     if ui.button("Видалити").clicked() {
-                                        println!("Видалити");
+                                        match remove_dir_all(dir_element.path().to_str().unwrap()) {
+                                            Ok(()) => {
+                                                println!("папка була видалена");
+                                            },
+                                            Err(err) => {
+                                                println!("{:#?}", err);
+                                            }
+                                        }
                                         ui.close_menu();
                                     }
                                     if ui.button("Копіювати шлях").clicked() {
@@ -439,7 +448,7 @@ impl eframe::App for FileExplorerApp {
                                 file_button.clone().on_hover_cursor(PointingHand);
 
                                 if file_button.double_clicked() {
-                                    self.open_file(dir_element);
+                                    self.open_file(&dir_element);
                                 }
 
                                 file_button.context_menu(|ui| {
@@ -456,7 +465,15 @@ impl eframe::App for FileExplorerApp {
                                         ui.close_menu();
                                     }
                                     if ui.button("Видалити").clicked() {
-                                        println!("Видалити");
+                                        match remove_file(dir_element.path().to_str().unwrap()) {
+                                            Ok(()) => {
+                                                println!("файл був видалений");
+                                            },
+                                            Err(err) => {
+                                                println!("{:#?}", err);
+                                            }
+                                        }
+
                                         ui.close_menu();
                                     }
                                     if ui.button("Копіювати шлях").clicked() {
