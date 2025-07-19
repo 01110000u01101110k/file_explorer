@@ -14,6 +14,7 @@ use eframe::{
 
 use std::{
     env,
+    fs,
     path::PathBuf,
     process::Command,
     env::consts::OS,
@@ -107,6 +108,8 @@ impl eframe::App for FileExplorerApp {
         let window_size = window_rect.size();
         
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            ui.add_space(5.0);
+            
             ui.heading("File Explorer");
 
             ui.add_space(5.0);
@@ -114,6 +117,8 @@ impl eframe::App for FileExplorerApp {
             ui.add_space(5.0);
 
             ui.horizontal(|ui| {
+                // ui.style_mut().spacing.button_padding = vec2(3.0, 3.0);
+                
                 let name_label = ui.label("Search: ");
 
                 ui.text_edit_singleline(&mut self.search).labelled_by(name_label.id);
@@ -270,12 +275,6 @@ impl eframe::App for FileExplorerApp {
                     }
                 }
 
-                if ctx.input(|i| i.pointer.primary_clicked()) {
-                    if self.is_main_context_menu_open {
-                        self.is_main_context_menu_open = false;
-                    }
-                }
-
                 if self.is_main_context_menu_open {
                     egui::Window::new("")
                         .current_pos(self.interact_pointer_pos)
@@ -286,9 +285,26 @@ impl eframe::App for FileExplorerApp {
                         .show(ctx, |ui| {
                             if ui.button("Оновити").clicked() {
                                 println!("Оновити");
-                                ui.close_menu();
+                            } else if ui.button("Створити нову папку").clicked() {
+                                let mut dir = self.current_dir.clone();
+                                dir.push("Нова папка");
+
+                                fs::create_dir(dir).expect("Не вдалося створити нову папку");
+                            } else if ui.button("Створити новий файл").clicked() {
+                                let mut file = self.current_dir.clone();
+                                file.push("Новий файл");
+
+                                fs::File::create(file).expect("Не вдалося створити новий файл");
                             }
+
+                            //ui.close_menu();
                         });
+                }
+
+                if ctx.input(|i| i.pointer.primary_clicked()) {
+                    if self.is_main_context_menu_open {
+                        self.is_main_context_menu_open = false;
+                    }
                 }
 
                 if self.is_disk_selection {
