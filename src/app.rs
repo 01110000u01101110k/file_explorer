@@ -229,7 +229,7 @@ impl eframe::App for FileExplorerApp {
                         }
 
                         disk_button.context_menu(|ui| {
-                            if ui.button("Інформація про диск").clicked() {
+                            if ui.button("Інформація про диск").on_hover_cursor(PointingHand).clicked() {
                                 println!("Інформація про диск");
                                 ui.close_menu();
                             }
@@ -283,14 +283,14 @@ impl eframe::App for FileExplorerApp {
                         .collapsible(false)
                         .title_bar(false)
                         .show(ctx, |ui| {
-                            if ui.button("Оновити").clicked() {
+                            if ui.button("Оновити").on_hover_cursor(PointingHand).clicked() {
                                 println!("Оновити");
-                            } else if ui.button("Створити нову папку").clicked() {
+                            } else if ui.button("Створити нову папку").on_hover_cursor(PointingHand).clicked() {
                                 let mut dir = self.current_dir.clone();
                                 dir.push("Нова папка");
 
                                 fs::create_dir(dir).expect("Не вдалося створити нову папку");
-                            } else if ui.button("Створити новий файл").clicked() {
+                            } else if ui.button("Створити новий файл").on_hover_cursor(PointingHand).clicked() {
                                 let mut file = self.current_dir.clone();
                                 file.push("Новий файл");
 
@@ -324,7 +324,7 @@ impl eframe::App for FileExplorerApp {
                         }
 
                         disk_button.context_menu(|ui| {
-                            if ui.button("Інформація про диск").clicked() {
+                            if ui.button("Інформація про диск").on_hover_cursor(PointingHand).clicked() {
                                 println!("Інформація про диск");
                                 ui.close_menu();
                             }
@@ -348,19 +348,19 @@ impl eframe::App for FileExplorerApp {
                                 }
 
                                 dir_button.context_menu(|ui| {
-                                    if ui.button("Перейменувати").clicked() {
+                                    if ui.button("Перейменувати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Перейменувати");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Копіювати").clicked() {
+                                    if ui.button("Копіювати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Копіювати");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Вирізати").clicked() {
+                                    if ui.button("Вирізати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Вирізати");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Видалити").clicked() {
+                                    if ui.button("Видалити").on_hover_cursor(PointingHand).clicked() {
                                         match remove_dir_all(dir_element.path().to_str().unwrap()) {
                                             Ok(()) => {
                                                 println!("папка була видалена");
@@ -371,11 +371,11 @@ impl eframe::App for FileExplorerApp {
                                         }
                                         ui.close_menu();
                                     }
-                                    if ui.button("Копіювати шлях").clicked() {
+                                    if ui.button("Копіювати шлях").on_hover_cursor(PointingHand).clicked() {
                                         println!("Копіювати шлях");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Інформація про папку").clicked() {
+                                    if ui.button("Інформація про папку").on_hover_cursor(PointingHand).clicked() {
                                         println!("Інформація про папку");
                                         ui.close_menu();
                                     }
@@ -395,19 +395,19 @@ impl eframe::App for FileExplorerApp {
                                 }
 
                                 file_button.context_menu(|ui| {
-                                    if ui.button("Перейменувати").clicked() {
+                                    if ui.button("Перейменувати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Перейменувати");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Копіювати").clicked() {
+                                    if ui.button("Копіювати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Копіювати");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Вирізати").clicked() {
+                                    if ui.button("Вирізати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Вирізати");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Видалити").clicked() {
+                                    if ui.button("Видалити").on_hover_cursor(PointingHand).clicked() {
                                         match remove_file(dir_element.path().to_str().unwrap()) {
                                             Ok(()) => {
                                                 println!("файл був видалений");
@@ -419,11 +419,11 @@ impl eframe::App for FileExplorerApp {
 
                                         ui.close_menu();
                                     }
-                                    if ui.button("Копіювати шлях").clicked() {
+                                    if ui.button("Копіювати шлях").on_hover_cursor(PointingHand).clicked() {
                                         println!("Копіювати шлях");
                                         ui.close_menu();
                                     }
-                                    if ui.button("Інформація про файл").clicked() {
+                                    if ui.button("Інформація про файл").on_hover_cursor(PointingHand).clicked() {
                                         println!("Інформація про файл");
                                         ui.close_menu();
                                     }
