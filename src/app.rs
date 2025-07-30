@@ -23,15 +23,26 @@ use std::{
     fs::remove_file
 };
 
+#[derive(PartialEq, Debug)]
+enum PopupType {
+    Rename,
+    DiskInfo,
+    None
+}
+
 #[derive(Debug)]
 pub struct FileExplorerApp {
     current_dir: PathBuf,
     program_root: PathBuf,
+    selected_item: PathBuf,
     is_disk_selection: bool,
     disk_list: Vec<char>,
     is_main_context_menu_open: bool,
     interact_pointer_pos: Pos2,
+    is_open_popup: bool,
+    popup_type: PopupType,
     search: String,
+    rename: String,
 }
 
 impl Default for FileExplorerApp {
@@ -40,12 +51,16 @@ impl Default for FileExplorerApp {
 
         Self {
             current_dir: path.clone(),
-            program_root: path,
+            program_root: path.clone(),
+            selected_item: path,
             is_disk_selection: false,
             disk_list: get_disk_list(),
             is_main_context_menu_open: false,
             interact_pointer_pos: pos2(0.0, 0.0),
+            is_open_popup: false,
+            popup_type: PopupType::None,
             search: String::new(),
+            rename: String::new(),
         }
     }
 }
@@ -231,6 +246,10 @@ impl eframe::App for FileExplorerApp {
                         disk_button.context_menu(|ui| {
                             if ui.button("Інформація про диск").on_hover_cursor(PointingHand).clicked() {
                                 println!("Інформація про диск");
+
+                                self.is_open_popup = true;
+                                self.popup_type = PopupType::DiskInfo;
+
                                 ui.close_menu();
                             }
 
@@ -301,6 +320,57 @@ impl eframe::App for FileExplorerApp {
                         });
                 }
 
+                if self.is_open_popup {
+                    egui::Window::new(
+                        if self.popup_type == PopupType::DiskInfo {
+                            "Інформація про диск"
+                        } else if self.popup_type == PopupType::Rename {
+                            "Перейменувати"
+                        } else {
+                            "empty popup"
+                        }
+                    )
+                        .default_size(vec2(
+                            window_size.x / 2.0,
+                            window_size.y / 2.0,
+                        ))
+                        .max_size(vec2(
+                            window_size.x - 200.0,
+                            window_size.y - 200.0,
+                        ))
+                        .default_pos(pos2(
+                            window_size.x / 4.0,
+                            window_size.y / 4.0,
+                        ))
+                        //.movable(false)
+                        .resizable(false)
+                        .collapsible(false)
+                        .show(ctx, |ui| {
+                            if self.popup_type == PopupType::DiskInfo {
+                                ui.label("Інформація");
+                            } else if self.popup_type == PopupType::Rename {
+                                ui.horizontal(|ui| {
+                                    let new_name_label = ui.label("Перейменувати: ");
+
+                                    ui.text_edit_singleline(&mut self.rename).labelled_by(new_name_label.id);
+
+                                    if ui.button("Перейменувати").on_hover_cursor(PointingHand).clicked() {
+                                        let mut new_name = self.selected_item.clone();
+
+                                        new_name.pop();
+                                        new_name.push(&self.rename);
+
+                                        fs::rename(&self.selected_item, new_name).expect("Виникла помилка, під час спроби перейменувати файл");
+                                    }
+                                });
+                            } else {}
+
+                            if ui.button("Закрити").on_hover_cursor(PointingHand).clicked() {
+                                self.is_open_popup = false;
+                            }
+                        });
+                }
+
                 if ctx.input(|i| i.pointer.primary_clicked()) {
                     if self.is_main_context_menu_open {
                         self.is_main_context_menu_open = false;
@@ -326,6 +396,10 @@ impl eframe::App for FileExplorerApp {
                         disk_button.context_menu(|ui| {
                             if ui.button("Інформація про диск").on_hover_cursor(PointingHand).clicked() {
                                 println!("Інформація про диск");
+
+                                self.is_open_popup = true;
+                                self.popup_type = PopupType::DiskInfo;
+                                
                                 ui.close_menu();
                             }
 
@@ -350,6 +424,12 @@ impl eframe::App for FileExplorerApp {
                                 dir_button.context_menu(|ui| {
                                     if ui.button("Перейменувати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Перейменувати");
+
+                                        self.is_open_popup = true;
+                                        self.popup_type = PopupType::Rename;
+                                        self.selected_item = dir_element.path();
+                                        self.rename = dir_element.file_name().into_string().unwrap();
+                                        
                                         ui.close_menu();
                                     }
                                     if ui.button("Копіювати").on_hover_cursor(PointingHand).clicked() {
@@ -397,6 +477,12 @@ impl eframe::App for FileExplorerApp {
                                 file_button.context_menu(|ui| {
                                     if ui.button("Перейменувати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Перейменувати");
+
+                                        self.is_open_popup = true;
+                                        self.popup_type = PopupType::Rename;
+                                        self.selected_item = dir_element.path();
+                                        self.rename = dir_element.file_name().into_string().unwrap();
+                                        
                                         ui.close_menu();
                                     }
                                     if ui.button("Копіювати").on_hover_cursor(PointingHand).clicked() {
