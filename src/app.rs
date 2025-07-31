@@ -451,8 +451,11 @@ impl eframe::App for FileExplorerApp {
                                         }
                                         ui.close_menu();
                                     }
-                                    if ui.button("Копіювати шлях").on_hover_cursor(PointingHand).clicked() {
+                                    if ui.button("Копіювати шлях до папки").on_hover_cursor(PointingHand).clicked() {
                                         println!("Копіювати шлях");
+                                        
+                                        ctx.copy_text(self.current_dir.to_string_lossy().to_string());
+
                                         ui.close_menu();
                                     }
                                     if ui.button("Інформація про папку").on_hover_cursor(PointingHand).clicked() {
@@ -505,8 +508,11 @@ impl eframe::App for FileExplorerApp {
 
                                         ui.close_menu();
                                     }
-                                    if ui.button("Копіювати шлях").on_hover_cursor(PointingHand).clicked() {
+                                    if ui.button("Копіювати шлях до файлу").on_hover_cursor(PointingHand).clicked() {
                                         println!("Копіювати шлях");
+
+                                        ctx.copy_text(dir_element.path().to_string_lossy().to_string());
+
                                         ui.close_menu();
                                     }
                                     if ui.button("Інформація про файл").on_hover_cursor(PointingHand).clicked() {
