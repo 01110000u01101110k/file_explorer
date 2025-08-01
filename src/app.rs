@@ -361,6 +361,8 @@ impl eframe::App for FileExplorerApp {
                                         new_name.push(&self.rename);
 
                                         fs::rename(&self.selected_item, new_name).expect("Виникла помилка, під час спроби перейменувати файл");
+                                    
+                                        self.is_open_popup = false;
                                     }
                                 });
                             } else {}
