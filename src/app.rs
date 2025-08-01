@@ -39,7 +39,6 @@ pub struct FileExplorerApp {
     disk_list: Vec<char>,
     is_main_context_menu_open: bool,
     interact_pointer_pos: Pos2,
-    is_open_popup: bool,
     popup_type: PopupType,
     search: String,
     rename: String,
@@ -57,7 +56,6 @@ impl Default for FileExplorerApp {
             disk_list: get_disk_list(),
             is_main_context_menu_open: false,
             interact_pointer_pos: pos2(0.0, 0.0),
-            is_open_popup: false,
             popup_type: PopupType::None,
             search: String::new(),
             rename: String::new(),
@@ -247,7 +245,6 @@ impl eframe::App for FileExplorerApp {
                             if ui.button("Інформація про диск").on_hover_cursor(PointingHand).clicked() {
                                 println!("Інформація про диск");
 
-                                self.is_open_popup = true;
                                 self.popup_type = PopupType::DiskInfo;
 
                                 ui.close_menu();
@@ -320,7 +317,7 @@ impl eframe::App for FileExplorerApp {
                         });
                 }
 
-                if self.is_open_popup {
+                if self.popup_type != PopupType::None {
                     egui::Window::new(
                         if self.popup_type == PopupType::DiskInfo {
                             "Інформація про диск"
@@ -362,13 +359,13 @@ impl eframe::App for FileExplorerApp {
 
                                         fs::rename(&self.selected_item, new_name).expect("Виникла помилка, під час спроби перейменувати файл");
                                     
-                                        self.is_open_popup = false;
+                                        self.popup_type = PopupType::None;
                                     }
                                 });
                             } else {}
 
                             if ui.button("Закрити").on_hover_cursor(PointingHand).clicked() {
-                                self.is_open_popup = false;
+                                self.popup_type = PopupType::None;
                             }
                         });
                 }
@@ -399,7 +396,6 @@ impl eframe::App for FileExplorerApp {
                             if ui.button("Інформація про диск").on_hover_cursor(PointingHand).clicked() {
                                 println!("Інформація про диск");
 
-                                self.is_open_popup = true;
                                 self.popup_type = PopupType::DiskInfo;
                                 
                                 ui.close_menu();
@@ -427,7 +423,6 @@ impl eframe::App for FileExplorerApp {
                                     if ui.button("Перейменувати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Перейменувати");
 
-                                        self.is_open_popup = true;
                                         self.popup_type = PopupType::Rename;
                                         self.selected_item = dir_element.path();
                                         self.rename = dir_element.file_name().into_string().unwrap();
@@ -483,7 +478,6 @@ impl eframe::App for FileExplorerApp {
                                     if ui.button("Перейменувати").on_hover_cursor(PointingHand).clicked() {
                                         println!("Перейменувати");
 
-                                        self.is_open_popup = true;
                                         self.popup_type = PopupType::Rename;
                                         self.selected_item = dir_element.path();
                                         self.rename = dir_element.file_name().into_string().unwrap();
